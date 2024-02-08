@@ -1,0 +1,31 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: todo-backend
+  namespace: default
+  labels:
+    app: todo-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-backend
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+    spec:
+      containers:
+        - name: todo-backend
+          image: 'teghitsugaya/todo-backend:v3'
+          env:
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              value: rahasia
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: DB_DATABASE
+              value: belajar

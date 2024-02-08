@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb-config
+data:
+  initdb.sql: |
+    DROP TABLE IF EXISTS todo;
+    CREATE SEQUENCE todo_id START 1;
+    CREATE TABLE todo (
+        ID serial PRIMARY KEY,
+        NOTE TEXT NOT NULL,
+        DONE BIT
+    );

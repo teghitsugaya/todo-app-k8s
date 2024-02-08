@@ -1,0 +1,191 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-initdb-config
+data:
+  initdb.sql: |
+    DROP TABLE IF EXISTS todo;
+    CREATE SEQUENCE todo_id START 1;
+    CREATE TABLE todo (
+        ID serial PRIMARY KEY,
+        NOTE TEXT NOT NULL,
+        DONE BIT
+    );
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: default
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: postgres
+          image: 'postgres:10'
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_PASSWORD
+              value: rahasia
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_DB
+              value: belajar
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres
+            - mountPath: /docker-entrypoint-initdb.d
+              name: postgres-initdb
+      volumes:
+        - name: postgres
+          persistentVolumeClaim:
+            claimName: postgres
+        - name: postgres-initdb
+          configMap:
+            name: postgres-initdb-config         
+  volumeClaimTemplates:
+    - metadata:
+        name: postgres
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: csi-sc-cinder
+        resources:
+          requests:
+            storage: 1Gi
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: postgres
+  namespace: default
+spec:
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  selector:
+    app: postgres
+  type: ClusterIP
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: todo-backend
+  namespace: default
+  labels:
+    app: todo-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-backend
+  template:
+    metadata:
+      labels:
+        app: todo-backend
+    spec:
+      containers:
+        - name: todo-backend
+          image: 'teghitsugaya/todo-backend:v3'
+          env:
+            - name: DB_USER
+              value: postgres
+            - name: DB_PASSWORD
+              value: rahasia
+            - name: DB_HOST
+              value: postgres
+            - name: DB_PORT
+              value: '5432'
+            - name: DB_DATABASE
+              value: belajar
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: todo-backend
+  namespace: default
+  labels:
+    app: todo-backend
+spec:
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: todo-backend
+  type: ClusterIP
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: todo-backend-loadbalancer
+  namespace: default
+  labels:
+    app: todo-backend
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  selector:
+    app: todo-backend
+  type: LoadBalancer
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: todo-frontend
+  namespace: default
+  labels:
+    app: todo-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: todo-frontend
+  template:
+    metadata:
+      labels:
+        app: todo-frontend
+    spec:
+      containers:
+        - name: todo-frontend
+          image: 'teghitsugaya/todo-f:v2'
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: todo-frontend
+  namespace: default
+  labels:
+    app: todo-frontend
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  selector:
+    app: todo-frontend
+  type: LoadBalancer
+

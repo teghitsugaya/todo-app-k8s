@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: todo-backend-lb
+  namespace: default
+  labels:
+    app: todo-backend
+spec:
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
+  selector:
+    app: todo-backend
+  type: LoadBalancer
