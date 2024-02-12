@@ -133,22 +133,29 @@ spec:
     app: todo-backend
   type: ClusterIP
 
+
 ---
-kind: Service
-apiVersion: v1
+apiVersion: networking.k8s.io/v1
+kind: Ingress
 metadata:
-  name: todo-backend-loadbalancer
+  name: todo-backend
   namespace: default
-  labels:
-    app: todo-backend
+  annotations:
+    kubernetes.io/ingress.class: nginx
 spec:
-  ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 8080
-  selector:
-    app: todo-backend
-  type: LoadBalancer
+  rules:
+  - host: api.oohara.my.id
+    http:
+      paths:
+      - backend:
+          service:
+            name: todo-backend
+            port:
+              number: 8080
+        path: /
+        pathType: ImplementationSpecific
+status:
+  loadBalancer: {}
 
 ---
 kind: Deployment
@@ -187,5 +194,27 @@ spec:
       targetPort: 80
   selector:
     app: todo-frontend
-  type: LoadBalancer
-
+  type: ClusterIP
+  
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: todo-frontend
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: todo.oohara.my.id
+    http:
+      paths:
+      - backend:
+          service:
+            name: todo-frontend
+            port:
+              number: 80
+        path: /
+        pathType: ImplementationSpecific
+status:
+  loadBalancer: {}
